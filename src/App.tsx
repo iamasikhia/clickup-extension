@@ -311,38 +311,136 @@ export default function App() {
   };
 
   // Time log management functions
-  const handleAddTimeLog = (logData: Omit<TimeLog, 'id'>) => {
-    const newLog: TimeLog = {
-      ...logData,
-      id: Date.now().toString()
-    };
-    setTimeLogs(prev => [...prev, newLog]);
+  const handleAddTimeLog = async (logData: Omit<TimeLog, 'id'>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase.from('time_logs').insert({
+      user_id: user.id,
+      task_id: logData.taskId,
+      hours: logData.hours,
+      date: logData.date,
+      description: logData.description
+    }).select().single();
+
+    if (data && !error) {
+      const newLog: TimeLog = {
+        id: data.id,
+        taskId: data.task_id,
+        hours: data.hours,
+        date: data.date,
+        description: data.description
+      };
+      setTimeLogs(prev => [newLog, ...prev]);
+      toast.success('Time log saved successfully');
+    } else {
+      console.error('Error adding time log:', error);
+      toast.error('Failed to save time log');
+    }
   };
 
-  const handleUpdateTimeLog = (id: string, updates: Partial<TimeLog>) => {
-    setTimeLogs(prev => prev.map(log =>
-      log.id === id ? { ...log, ...updates } : log
-    ));
+  const handleUpdateTimeLog = async (id: string, updates: Partial<TimeLog>) => {
+    const updateData: any = {};
+    if (updates.hours !== undefined) updateData.hours = updates.hours;
+    if (updates.date !== undefined) updateData.date = updates.date;
+    if (updates.description !== undefined) updateData.description = updates.description;
+    if (updates.taskId !== undefined) updateData.task_id = updates.taskId;
+
+    const { error } = await supabase.from('time_logs').update(updateData).eq('id', id);
+
+    if (!error) {
+      setTimeLogs(prev => prev.map(log =>
+        log.id === id ? { ...log, ...updates } : log
+      ));
+      toast.success('Time log updated');
+    } else {
+      console.error('Error updating time log:', error);
+      toast.error('Failed to update time log');
+    }
   };
 
-  const handleDeleteTimeLog = (id: string) => {
-    setTimeLogs(prev => prev.filter(log => log.id !== id));
+  const handleDeleteTimeLog = async (id: string) => {
+    const { error } = await supabase.from('time_logs').delete().eq('id', id);
+
+    if (!error) {
+      setTimeLogs(prev => prev.filter(log => log.id !== id));
+      toast.success('Time log deleted');
+    } else {
+      console.error('Error deleting time log:', error);
+      toast.error('Failed to delete time log');
+    }
   };
 
   // Invoice management functions
-  const handleCreateInvoice = (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
-    const newInvoice: Invoice = {
-      ...invoiceData,
-      id: 'inv_' + Date.now().toString(),
-      createdAt: new Date().toISOString()
-    };
-    setInvoices(prev => [...prev, newInvoice]);
+  // Invoice management functions
+  const handleCreateInvoice = async (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data, error } = await supabase.from('invoices').insert({
+      user_id: user.id,
+      task_ids: invoiceData.taskIds,
+      total_hours: invoiceData.totalHours,
+      total_amount: invoiceData.totalAmount,
+      status: invoiceData.status,
+      client_name: invoiceData.clientName,
+      client_email: invoiceData.clientEmail,
+      description: invoiceData.description,
+      notes: invoiceData.notes,
+      payment_method: invoiceData.paymentMethod,
+      payment_instructions: invoiceData.paymentInstructions
+    }).select().single();
+
+    if (data && !error) {
+      const newInvoice: Invoice = {
+        ...invoiceData,
+        id: data.id,
+        createdAt: data.created_at,
+        // Ensure mapping back all fields if needed, though ...invoiceData covers most
+        taskIds: data.task_ids, // Confirming array comes back
+        clientName: data.client_name,
+        clientEmail: data.client_email,
+        totalAmount: data.total_amount,
+        totalHours: data.total_hours,
+        approvalLink: data.approval_link,
+        approvedAt: data.approved_at,
+        clientSignature: data.client_signature,
+        paymentMethod: data.payment_method,
+        paymentInstructions: data.payment_instructions
+      };
+      setInvoices(prev => [newInvoice, ...prev]);
+      toast.success('Invoice created successfully');
+    } else {
+      console.error('Error creating invoice:', error);
+      toast.error('Failed to create invoice');
+    }
   };
 
-  const handleUpdateInvoice = (id: string, updates: Partial<Invoice>) => {
-    setInvoices(prev => prev.map(invoice =>
-      invoice.id === id ? { ...invoice, ...updates } : invoice
-    ));
+  const handleUpdateInvoice = async (id: string, updates: Partial<Invoice>) => {
+    const updateData: any = {};
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.clientName !== undefined) updateData.client_name = updates.clientName;
+    if (updates.clientEmail !== undefined) updateData.client_email = updates.clientEmail;
+    if (updates.totalAmount !== undefined) updateData.total_amount = updates.totalAmount;
+    if (updates.totalHours !== undefined) updateData.total_hours = updates.totalHours;
+    if (updates.taskIds !== undefined) updateData.task_ids = updates.taskIds;
+    if (updates.approvalLink !== undefined) updateData.approval_link = updates.approvalLink;
+    if (updates.approvedAt !== undefined) updateData.approved_at = updates.approvedAt;
+    if (updates.clientSignature !== undefined) updateData.client_signature = updates.clientSignature;
+    if (updates.paymentMethod !== undefined) updateData.payment_method = updates.paymentMethod;
+    if (updates.paymentInstructions !== undefined) updateData.payment_instructions = updates.paymentInstructions;
+
+    const { error } = await supabase.from('invoices').update(updateData).eq('id', id);
+
+    if (!error) {
+      setInvoices(prev => prev.map(invoice =>
+        invoice.id === id ? { ...invoice, ...updates } : invoice
+      ));
+      toast.success('Invoice updated');
+    } else {
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice');
+    }
   };
 
 
