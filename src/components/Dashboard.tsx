@@ -32,6 +32,7 @@ export function Dashboard({ tasks, timeLogs, invoices, isConnected, onLogout }: 
 
   const handleClickUpConnect = () => {
     const clientId = import.meta.env.VITE_CLICKUP_CLIENT_ID;
+    // Dynamic redirect URI that works for both Localhost and Vercel
     const redirectUri = window.location.origin;
     const url = `https://app.clickup.com/api?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code`;
 
